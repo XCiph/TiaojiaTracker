@@ -1,9 +1,16 @@
 <template>
   <div class="p-6 max-w-3xl mx-auto">
-    <h1 class="text-xl font-bold mb-4">角色调价系统</h1>
+    <h1 class="text-xl font-bold mb-4">角色调价计算器</h1>
+
     <div class="mb-2">
       <label><input type="checkbox" v-model="enablePopularity" /> 启用人气度</label>
     </div>
+    <label class="mb-2">
+      <input type="checkbox" v-model="enableBounds" />
+      启用最大/最小调价限制
+    </label>
+
+
     <table class="table-auto w-full mb-4 border">
       <thead>
         <tr>
@@ -44,20 +51,34 @@
         </tr>
       </tbody>
     </table>
-
     <div class="mt-4 text-sm text-gray-700">
       总价差值：<span class="font-mono">{{ diffDisplay }}</span>
     </div>
 
+    <br>
     <div class="flex gap-4 mb-4">
       <button @click="addRow" class="bg-green-500 text-white px-3 py-1 rounded">添加角色</button>
       <button @click="calculate" class="bg-blue-600 text-white px-3 py-1 rounded">计算调价</button>
       <button @click="exportCSV" class="bg-gray-500 text-white px-3 py-1 rounded">导出CSV</button>
       <input type="file" accept=".csv" @change="importCSV" class="mt-2" />
     </div>
-
+    <br>
     <div class="mb-2">
       原价：<input v-model.number="basePrice" type="number" class="border w-24 px-1" />
+    </div>
+    <div class="flex gap-4 mb-4" v-if="enableBounds">
+      <div>
+        <label class="block mb-1">最大调价值：</label>
+        <input v-model.number="maxAdj" type="number" class="border w-24 px-1" />
+      </div>
+      <div>
+        <label class="block mb-1">最小调价值：</label>
+        <input v-model.number="minAdj" type="number" class="border w-24 px-1" />
+      </div>
+    </div>
+    <br>
+    <div>
+      注：没有启用最大值/最小值功能时默认上下范围为原价的30%浮动。
     </div>
   </div>
 </template>
@@ -68,6 +89,9 @@ import Sortable from 'sortablejs'
 import axios from 'axios'
 
 const diffDisplay = ref('-')
+const enableBounds = ref(false)
+const maxAdj = ref(30)   // 默认最大 +30
+const minAdj = ref(-30)  // 默认最小 -30
 
 function exportCSV() {
   const header = '角色名称,数量,调价'
@@ -151,7 +175,9 @@ async function calculate() {
     integer_only: true,
     popularity_levels: enablePopularity.value
       ? Object.fromEntries(roles.value.map(r => [r.name, r.popLevel || ""]))
-      : undefined
+      : undefined,
+    max_adj: enableBounds.value ? maxAdj.value : undefined,
+    min_adj: enableBounds.value ? minAdj.value : undefined,
   }
 
   const res = await axios.post('http://localhost:5000/api/solve', payload)
@@ -160,7 +186,6 @@ async function calculate() {
     r.adjustment = solution.adjustments?.[r.name] ?? null
   })
 
-  // 设置总价差值显示（四舍五入整数）
   diffDisplay.value = solution.diff != null ? Math.round(solution.diff) : '-'
 }
 </script>

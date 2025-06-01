@@ -10,12 +10,12 @@ def solve_adjustment(base_price, role_names, role_counts, popularity,
 
     # 人气度映射表（按比例）
     level_bounds = {
-        '+++': (0.15, 0.30),
-        '++': (0.05, 0.20),
-        '+': (-0.05, 0.10),
-        '-': (-0.10, 0.05),
-        '--': (-0.5, -0.20),
-        '---': (-0.15, -0.30)
+        '+++': (0.5 * max_adj, 1.0 * max_adj),
+        '++': (0.2 * max_adj, 0.7 * max_adj),
+        '+':  (0.1 * min_adj, 0.4 * max_adj),
+        '-':  (0.4 * min_adj, 0.1 * max_adj),
+        '--': (0.7 * min_adj, 0.2 * min_adj),
+        '---': (1.0 * min_adj, 0.5 * min_adj),
     }
 
     prob = LpProblem("AnimeGoodsPriceAdjustment_OptimalOnly", LpMinimize)
@@ -26,9 +26,7 @@ def solve_adjustment(base_price, role_names, role_counts, popularity,
     for name in role_names:
         if popularity_levels and name in popularity_levels:
             level = popularity_levels[name]
-            min_b, max_b = level_bounds[level]
-            lb = base_price * min_b
-            ub = base_price * max_b
+            lb, ub = level_bounds[level]
         else:
             lb = min_adj
             ub = max_adj
