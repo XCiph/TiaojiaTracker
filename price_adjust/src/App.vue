@@ -1,7 +1,9 @@
 <template>
   <div class="p-6 max-w-3xl mx-auto">
     <h1 class="text-xl font-bold mb-4">角色调价系统</h1>
-
+    <div class="mb-2">
+      <label><input type="checkbox" v-model="enablePopularity" /> 启用人气度</label>
+    </div>
     <table class="table-auto w-full mb-4 border">
       <thead>
         <tr>
@@ -10,6 +12,7 @@
           <th class="border px-2">数量</th>
           <th class="border px-2">调价结果</th>
           <th class="border px-2">操作</th>
+          <th class="border px-2">人气等级</th>
         </tr>
       </thead>
       <tbody ref="sortableContainer">
@@ -27,9 +30,24 @@
           <td class="border px-2">
             <button @click="removeRow(index)" class="text-red-500">删除</button>
           </td>
+          <td class="border px-2">
+            <select v-if="enablePopularity" v-model="row.popLevel" class="border w-full">
+              <option value="">-</option>
+              <option value="+++">+++</option>
+              <option value="++">++</option>
+              <option value="+">+</option>
+              <option value="-">-</option>
+              <option value="--">--</option>
+              <option value="---">---</option>
+            </select>
+          </td>
         </tr>
       </tbody>
     </table>
+
+    <div class="mt-4 text-sm text-gray-700">
+      总价差值：<span class="font-mono">{{ diffDisplay }}</span>
+    </div>
 
     <div class="flex gap-4 mb-4">
       <button @click="addRow" class="bg-green-500 text-white px-3 py-1 rounded">添加角色</button>
@@ -48,6 +66,9 @@
 import { ref, onMounted } from 'vue'
 import Sortable from 'sortablejs'
 import axios from 'axios'
+
+const diffDisplay = ref('-')
+
 function exportCSV() {
   const header = '角色名称,数量,调价'
   const rows = roles.value.map(role =>
@@ -89,11 +110,12 @@ function importCSV(event) {
 }
 
 const roles = ref([
-  { id: 1, name: 'A', count: 6 },
-  { id: 2, name: 'B', count: 4 },
-  { id: 3, name: 'C', count: 3 },
+  { id: 1, name: 'A', count: 6, popLevel: '' },
+  { id: 2, name: 'B', count: 4, popLevel: '' },
+  { id: 3, name: 'C', count: 3, popLevel: '' }
 ])
 
+const enablePopularity = ref(false)
 const basePrice = ref(100)
 const nextId = ref(4)
 const sortableContainer = ref(null)
@@ -126,7 +148,10 @@ async function calculate() {
     role_names: roles.value.map(r => r.name),
     role_counts: Object.fromEntries(roles.value.map(r => [r.name, r.count])),
     popularity: roles.value.map(r => r.name),
-    integer_only: true
+    integer_only: true,
+    popularity_levels: enablePopularity.value
+      ? Object.fromEntries(roles.value.map(r => [r.name, r.popLevel || ""]))
+      : undefined
   }
 
   const res = await axios.post('http://localhost:5000/api/solve', payload)
@@ -134,6 +159,9 @@ async function calculate() {
   roles.value.forEach(r => {
     r.adjustment = solution.adjustments?.[r.name] ?? null
   })
+
+  // 设置总价差值显示（四舍五入整数）
+  diffDisplay.value = solution.diff != null ? Math.round(solution.diff) : '-'
 }
 </script>
 
