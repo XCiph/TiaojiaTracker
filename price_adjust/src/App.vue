@@ -151,7 +151,6 @@ onMounted(() => {
       const oldIndex = evt.oldIndex
       const newIndex = evt.newIndex
       if (oldIndex === newIndex) return
-
       const movedItem = roles.value.splice(oldIndex, 1)[0]
       roles.value.splice(newIndex, 0, movedItem)
     },
